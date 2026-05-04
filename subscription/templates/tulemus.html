@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Tulemus</h1>
+{% if status == "success" %}
+    <p class="text-success">Teie konto on käivitatud! Teil on nüüd juurdepääs VM lehele. Makse läks sujuvalt läbi.</p>
+{% elif status == "exists" %}
+    <p class="text-info">Teie konto on juba käivitatud! Makse tühistati.</p>
+{% elif status == "error" %}
+    <p class="text-danger">Midagi läks valesti. Teie konto ei ole käivitatud. Makse tühistati.</p>
+{% else %}
+    <p class="text-warning">Tundmatu probleem. Teie konto ei ole käivitatud. Makse tühistati.</p>
+{% endif %}
+{% endblock %}

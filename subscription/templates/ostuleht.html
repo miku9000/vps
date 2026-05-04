@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-center mt-5 mb-5">Osta endale pakett!</h1>
+
+<div class="row row-cols-1 row-cols-md-1 mt-5 mb-5 text-center">
+    <div class="col">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <span class="h1">Entry-level pakett</span>
+            </div>
+            <div class="card-body">
+                <span class="card-title pricing-card-title h1">
+                    €1
+                    <small class="text-body-secondary fw-light">/kuu</small>
+                </span>
+                <ul class="list-unstyled mt-3 mb-3">
+                    <li>2 vCPU core</li>
+                    <li>2048 MB RAMi</li>
+                    <li>20 GB mälu</li>
+                    <li>OSiks Ubuntu Server 24.04.4 LTS</li>
+                </ul>
+                <button type="button" class="w-100 btn btn-lg btn-primary" data-bs-toggle="modal" data-bs-target="#osta-modal">Osta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="osta-modal" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Kinnitamine</h5>
+            </div>
+            <div class="modal-body">
+                <span>Olete kindel, et soovite osta seda paketti?</span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form method="POST" action="{% url 'tulemus' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Osta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

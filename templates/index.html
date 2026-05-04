@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Koduleht</h1>
+<hr>
+{% if user.is_authenticated %}
+    <p class="text-success">Tere, {{ user.username }}!</p>
+    {% if user.is_activated_user %}
+        <p class="text-success">Teie konto on aktiveeritud.</p>
+    {% else %}
+        <p class="text-danger">Teie konto ei ole aktiveeritud.</p>
+    {% endif %}
+{% else %}
+    <p class="text-danger">Teie ei ole logitud sisse.</p>
+{% endif %}
+<hr>
+<article>
+    <header>
+        <h2>Meie kohta</h2>
+    </header>
+
+    <section>
+        <h3>Mida me pakkume:</h3>
+        <p>Me pakkume entry-level VDS teenust turvaliselt, mugavalt ja odavalt.</p>
+        <p>Entry-level VDSil on saadaval 2 vCPU core, 2048 MB operatiivmälu, 20 GB mälu.</p>
+        <p>Operatsioonisüsteemiks on Ubuntu Server 24.04.4 LTS.</p>
+        <br>
+        <h3>Mis on VDS?</h3>
+        <p>Virtuaalne hallatav server, inglise keeles Virtual Dedicated Server ning lühidalt VDS, on server mida teenusepakkuja haldab klientidele raha eest.</p>
+        <br>
+        <h3>Mis siis kui ma tahan katkestada oma tellimust?</h3>
+        <p>Me automaatselt kustutame sinu virtuaalmasina ja deaktiveerime su konto.</p>
+        <p class="text-warning">Hoiatus: Teie andmed VDSil kustutatakse automaatselt ära.</p>
+    </section>
+
+    <footer>
+        <p class="h6">Mihkel</p>
+    </footer>
+</article>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<form method="POST">
+    {% csrf_token %}
+    <h1 class="mb-5">Registreerimine</h1>
+    <div class="form-floating mb-2">
+        <input type="text" id="floatingInput" class="form-control" placeholder="Username" name="username">
+        <label for="floatingInput">Username</label>
+    </div>
+    <div class="form-floating mb-2">
+        <input type="email" id="floatingInput" class="form-control" placeholder="Email" name="email">
+        <label for="floatingInput">Email address</label>
+    </div>
+    <div class="form-floating mb-5">
+        <input type="password" class="form-control" id="floatingPassword" placeholder="Password" name="password">
+        <label for="floatingPassword">Password</label>
+    </div>
+    <button class="btn btn-primary w-100 py-2" type="submit">Registreeri</button>
+</form>
+{% endblock %}

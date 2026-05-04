@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>({{ user.username }}) DASHBOARD</h1>
+<hr>
+<h2>Tavaline informatsioon</h2>
+<p>Olek: {{ vm.status }}</p>
+<hr>
+<h2>VM paneel</h2>
+<div class="d-flex gap-3">
+    <form action="{% url 'start_vm' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Käivita</button>
+    </form>
+    <form method="POST" action="{% url 'stop_vm' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Peata</button>
+    </form>
+    <a href="{% url 'console' vm.vmid %}" class="btn btn-primary">Konsool</a>
+</div>
+{% endblock %}

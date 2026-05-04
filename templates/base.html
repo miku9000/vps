@@ -1,0 +1,64 @@
+ {% load static %}
+ <!DOCTYPE html>
+ <html lang="et" class="h-100">
+ <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <title>VDS rentimine</title>
+ </head>
+ <body class="d-flex flex-column h-100">
+    <header>
+        <nav class="navbar navbar-expand-sm bg-dark navbar-dark sticky-top">
+            <div class="container-fluid">
+                <ul class="navbar-nav">
+                    <span class="navbar-brand">VDS Rentimine</span>
+                    <li class="navbar-item">
+                        <a href="{% url 'home' %}" class="nav-link">Koduleht</a>
+                    </li>
+                    <li class="navbar-item">
+                        <a href="{% url 'ostuleht' %}" class="nav-link">Ostuleht</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        {% if user.is_activated_user %}
+                            <li class="navbar-item">
+                                <form method="POST" action="{% url 'dashboard' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="nav-link">VM Leht</button>
+                                </form>
+                            </li>
+                        {% endif %}
+                        <li class="navbar-item">
+                            <form method="POST" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link text-danger">Logi välja</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="navbar-item">
+                            <a href="{% url 'login' %}" class="nav-link">Logi sisse</a>
+                        </li>
+                        <li class="navbar-item">
+                            <a href="{% url 'register' %}" class="nav-link">Registreerimine</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-shrink-0">
+        <div class="container border mt-5">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer mt-auto">
+        <div class="container-fluid bg-dark text-white text-center">
+            <span>Mihkel ja Carl 2026</span>
+        </div>
+    </footer>
+ </body>
+ </html>

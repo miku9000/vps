@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 PROXMOX_URL = "https://192.168.x.x:8006" # PROXMOX URL SIIA
 TOKEN = "PVEAPIToken=PROX_KASUTAJA@REALM!TOKEN_NIMI=TOKEN_SALADUS" # PROXMOXI TOKEN SIIA
+PROXMOX_NODE = "PROXMOX_NODE" # PROXMOX NODE SIIA
 VM_START_ID = 800
 
 def vm_dashboard(request):
@@ -29,8 +30,9 @@ def vm_dashboard(request):
             vm = KliendiVM.objects.create(
                 user=request.user,
                 vmid=generate_vmid(),
-                node="PROXMOX_NODE", # PROXMOX NODE SIIA
-                status="creating"
+                node=PROXMOX_NODE,
+                status="creating",
+                ip=allocate_ip()
             )
 
         create_vm_task.delay(vm.id)
@@ -117,28 +119,16 @@ def stop_vm(request):
 
     return redirect(f"{reverse('dashboard')}")
 
-def get_vm_ip(node, vmid):
-    url = f"{PROXMOX_URL}/api2/json/nodes/{node}/qemu/{vmid}/agent/network-get-interfaces"
+def allocate_ip():
+    used = set(KliendiVM.objects.exclude(ip=None).values_list("ip", flat=True))
+    base = "192.168.10."
 
-    headers = {
-        "Authorization": TOKEN
-    }
-
-    try:
-        response = requests.get(url, headers=headers, verify=False, timeout=10)
-        data = response.json()
-
-        interfaces = data.get("data", {}).get("result", [])
-
-        for iface in interfaces:
-            for ip in iface.get("ip-addresses", []):
-                if ip.get("ip-address-type") == "ipv4":
-                    return ip.get("ip-address")
-
-    except Exception:
-        return None
-
-    return None
+    for i in range(220, 240):
+        ip = f"{base}{i}"
+        if ip not in used:
+            return ip
+    
+    raise Exception("No free IPs")
 
 def vm_console(request, vmid):
     if not request.user.is_authenticated:

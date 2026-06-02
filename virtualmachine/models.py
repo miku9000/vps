@@ -20,6 +20,7 @@ class KliendiVM(models.Model):
         choices = STATUS_CHOICES,
         default = 'creating'
     )
+    ip = models.GenericIPAddressField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

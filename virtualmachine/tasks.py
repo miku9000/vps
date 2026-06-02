@@ -4,6 +4,8 @@ import subprocess
 import json
 import os
 import logging
+import uuid
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -11,103 +13,142 @@ TERRAFORM_SERVER = "DB_KASUTAJA@DB_IP" # siia oma andmebaasi server kasutaja ja 
 
 BASE_TF_DIR = "/ROOT_DIRECTORY/terraform/terraform-cloud-init-2204" # siia panna terraform skriptid
 REMOTE_RUNS_DIR = "/ROOT_DIRECTORY/terraform/runs" # siia lähevad terraform virtuaalmasinad
+KEY_DIR = "/ROOT_DIRECTORY/vps/ssh_keys" # siia lähevad virtuaalmasinate ssh võtmed
+
+def run_stream(cmd, label):
+    logger.info(f"{label} START")
+    logger.info(f"{label} CMD {cmd}")
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+    output = []
+
+    for line in p.stdout:
+        line = line.rstrip()
+        output.append(line)
+        logger.info(f"{label} {line}")
+
+    p.wait()
+
+    logger.info(f"{label} END RC={p.returncode}")
+
+    return p.returncode, "\n".join(output)
+
+
+def ssh(cmd, label):
+    return run_stream([
+        "ssh",
+        "-o",
+        "StrictHostKeyChecking=no",
+        TERRAFORM_SERVER,
+        cmd
+    ], label)
+
+
+def scp(local, remote, label):
+    return run_stream([
+        "scp",
+        local,
+        remote
+    ], label)
 
 
 @shared_task
 def create_vm_task(vm_id):
-    logger.warning(f"TASK STARTED {vm_id}")
+    logger.warning(f"TASK START vm_id={vm_id}")
 
     vm = KliendiVM.objects.get(id=vm_id)
 
     if vm.status != "creating":
-        logger.warning("VM not in creating state, skipping")
+        logger.warning("SKIP wrong state")
         return
 
     vm.status = "creating"
     vm.save()
 
-    # Generate SSH key
+    run_id = str(uuid.uuid4())
+    remote_vm_dir = f"{REMOTE_RUNS_DIR}/vm_{vm.vmid}_{run_id}"
 
-    KEY_DIR = "/ROOT_DIRECTORY/vps/ssh_keys" # siia lähevad ssh võtmed
+    logger.info(f"RUN_ID {run_id}")
+    logger.info(f"REMOTE_DIR {remote_vm_dir}")
+
     key_path = f"{KEY_DIR}/vm_{vm.vmid}"
 
-    subprocess.run([
-        "ssh-keygen",
-        "-t", "ed25519",
-        "-f", key_path,
-        "-N", ""
-    ], check=True)
+    if not os.path.exists(key_path):
+        rc, _ = run_stream([
+            "ssh-keygen",
+            "-t",
+            "rsa",
+            "-b",
+            "4096",
+            "-f",
+            key_path,
+            "-N",
+            ""
+        ], "SSH_KEYGEN")
+
+        if rc != 0:
+            vm.status = "error"
+            vm.save()
+            return
 
     with open(f"{key_path}.pub") as f:
         public_key = f.read().strip()
 
-    # Prepare remote TF dir
+    logger.info(f"PUBLIC_KEY {public_key}")
 
-    remote_vm_dir = f"{REMOTE_RUNS_DIR}/vm_{vm.vmid}"
-
-    remote_setup_cmd = (
-        f"rm -rf {remote_vm_dir} && "
-        f"mkdir -p {remote_vm_dir} && "
-        f"cp -r {BASE_TF_DIR}/* {remote_vm_dir}/"
+    rc, _ = ssh(
+        f"rm -rf {remote_vm_dir} && mkdir -p {remote_vm_dir} && cp -r {BASE_TF_DIR}/* {remote_vm_dir}/",
+        "REMOTE_SETUP"
     )
 
-    subprocess.run([
-        "ssh",
-        "-o", "StrictHostKeyChecking=no",
-        TERRAFORM_SERVER,
-        remote_setup_cmd
-    ], check=True)
+    if rc != 0:
+        vm.status = "error"
+        vm.save()
+        return
 
-    # Write tfvars remotely
+
 
     tfvars = {
         "node": vm.node,
         "vmid": vm.vmid,
-        "vmname": f"VM-user-{vm.user}",
-        "ssh_public_key": public_key
+        "vmname": f"VM-user-{vm.user}-{run_id}",
+        "ssh_public_key": public_key,
+        "ip": vm.ip
     }
 
-    local_tfvars = f"/tmp/vm_{vm.vmid}.json"
+    local_tfvars = f"/tmp/vm_{vm.vmid}_{run_id}.json"
 
     with open(local_tfvars, "w") as f:
         json.dump(tfvars, f)
 
     remote_tfvars = f"{remote_vm_dir}/vars.json"
 
-    subprocess.run([
-        "scp",
-        local_tfvars,
-        f"{TERRAFORM_SERVER}:{remote_tfvars}"
-    ], check=True)
+    rc, _ = scp(local_tfvars, f"{TERRAFORM_SERVER}:{remote_tfvars}", "SCP_TFVARS")
 
-    # Run Terraform (isolated)
+    if rc != 0:
+        vm.status = "error"
+        vm.save()
+        return
 
-    remote_apply_cmd = (
+    tf_cmd = (
         f"cd {remote_vm_dir} && "
         f"terraform init -input=false && "
         f"terraform apply -auto-approve -var-file=vars.json"
     )
 
-    result = subprocess.run(
-        [
-            "ssh",
-            "-o", "StrictHostKeyChecking=no",
-            TERRAFORM_SERVER,
-            remote_apply_cmd,
-        ],
-        capture_output=True,
-        text=True
-    )
+    rc, output = ssh(tf_cmd, "TERRAFORM_APPLY")
 
-    logger.warning(f"STDOUT:\n{result.stdout}")
-    logger.warning(f"STDERR:\n{result.stderr}")
-    logger.warning(f"RETURN CODE: {result.returncode}")
+    logger.info(f"TERRAFORM_RC {rc}")
+    logger.info(f"TERRAFORM_OUTPUT_START")
+    logger.info(output)
+    logger.info(f"TERRAFORM_OUTPUT_END")
 
-    # Final status
-
-    if result.returncode == 0:
+    if rc == 0:
         vm.status = "running"
+        logger.warning(f"VM RUNNING vmid={vm.vmid}")
     else:
         vm.status = "error"
+        logger.error(f"VM FAILED vmid={vm.vmid}")
 
     vm.save()

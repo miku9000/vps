@@ -17,10 +17,8 @@
         term.open(document.getElementById('terminal'));
         term.write("Connecting...\r\n");
 
-        const protocol = "wss://";
-
         const socket = new WebSocket(
-            "ws://" + window.location.host + "/ws/ssh/{{ vm.vmid }}/"
+            "wss://" + window.location.host + "/ws/ssh/{{ vm.vmid }}/"
         );
 
         socket.onopen = () => {

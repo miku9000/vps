@@ -1,19 +1,17 @@
 import os
-import django
+from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'vps.settings')
 
-# THIS is required before any model/import usage
-django.setup()
+django_asgi_app = get_asgi_application()
 
-from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
-
-import virtualmachine.routing
+import virtualmachine.routing  # import AFTER setup
 
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": URLRouter(
-        virtualmachine.routing.websocket_urlpatterns
+    "http": django_asgi_app,
+    "websocket": AuthMiddlewareStack(
+        URLRouter(virtualmachine.routing.websocket_urlpatterns)
     ),
 })
